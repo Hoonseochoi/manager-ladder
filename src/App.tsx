@@ -195,7 +195,7 @@ export default function App() {
 
   const copy = async () => {
     const lines = [
-      `🪜 설계 몰빵 사다리${memo ? ` — ${memo}` : ""}`,
+      `🪜 설계잇츠me${memo ? ` — ${memo}` : ""}`,
       `🏆 당첨: ${winnerNames.join(", ") || "아직 없음"}`,
       `참여: ${rows.map((r) => r.name).join(", ")}`,
     ];
@@ -223,14 +223,18 @@ export default function App() {
         {/* 헤더 */}
         <header className="relative mb-6 px-1">
           <span className="inline-block -rotate-3 rounded-full border-[2.5px] border-black bg-cyan-300 px-3 py-1 font-mono text-[11px] font-black tracking-widest shadow-brutal-sm">
-            ALL_IN_LADDER
+            Hoonstartup
           </span>
-          <h1 className="mt-3 font-cute text-[44px] leading-[1.05] tracking-tight">
-            설계 몰빵
-            <br />
-            <span className="relative inline-block">
-              <span className="relative z-10">사다리 타기</span>
-              <span className="absolute inset-x-[-4px] bottom-1 z-0 h-4 -rotate-1 rounded-full bg-amber-300" />
+          {/* 브랜드 로고: 설계잇츠 + 스티커처럼 붙은 me */}
+          <h1 aria-label="설계잇츠me" className="mt-4 flex items-end">
+            <span aria-hidden className="brand-word font-cute text-[54px] leading-none tracking-[0.01em] max-[380px]:text-[48px]">
+              설계잇츠
+            </span>
+            <span
+              aria-hidden
+              className="relative -mb-1 -ml-1 inline-block -rotate-[10deg] rounded-[18px] border-[3px] border-black bg-rose-400 px-2.5 pb-2.5 pt-0.5 font-script text-[38px] leading-none text-white shadow-brutal max-[380px]:text-[32px]"
+            >
+              me
             </span>
           </h1>
           <p className="mt-3 text-[15px] font-medium text-black/55">매니저 전원이 타고, 당첨된 사람이 설계를 몰빵 받아요.</p>

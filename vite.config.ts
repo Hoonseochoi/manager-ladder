@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon.svg", "icons/apple-touch-icon.png"],
       manifest: {
-        name: "매니저 사다리",
-        short_name: "사다리",
+        name: "설계잇츠me",
+        short_name: "설계잇츠me",
         description: "설계매물(설계사_매니저)을 입력하면 사다리로 매니저를 배정합니다.",
         lang: "ko",
         start_url: "./",
