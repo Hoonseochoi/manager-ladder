@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Copy, Download, Trash2, Trophy } from "lucide-react";
+import { ChevronDown, Cloud, Copy, Download, Smartphone, Trash2, Trophy, UserRound } from "lucide-react";
 import { ManagerAvatar } from "@/components/ui/manager-avatar";
+import type { SyncMode } from "@/hooks/use-shared-history";
 import { cn } from "@/lib/utils";
 
 export type HistoryEntry = {
   id: string;
   /** ISO 시각 */
   at: string;
+  /** 돌린 사람 */
+  by?: string;
   memo: string;
   players: string[];
   winners: string[];
@@ -15,6 +18,9 @@ export type HistoryEntry = {
 
 type Props = {
   entries: HistoryEntry[];
+  mode: SyncMode;
+  me: string;
+  onEditMe: () => void;
   avatars: Record<string, string>;
   onDelete: (id: string) => void;
   onClear: () => void;
@@ -28,13 +34,13 @@ const fmt = (iso: string) => {
 };
 
 export const historyLine = (h: HistoryEntry) =>
-  `${fmt(h.at)}${h.memo ? ` [${h.memo}]` : ""} 🏆 ${h.winners.join(", ")} (참여 ${h.players.length}명: ${h.players.join(", ")})`;
+  `${fmt(h.at)}${h.by ? ` (${h.by})` : ""}${h.memo ? ` [${h.memo}]` : ""} 🏆 ${h.winners.join(", ")} (참여 ${h.players.length}명: ${h.players.join(", ")})`;
 
 function toCsv(entries: HistoryEntry[]) {
   const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
-  const head = ["일시", "설계", "당첨", "당첨 인원", "참여", "참여 인원"].join(",");
+  const head = ["일시", "돌린 사람", "설계", "당첨", "당첨 인원", "참여", "참여 인원"].join(",");
   const rows = entries.map((h) =>
-    [fmt(h.at), h.memo, h.winners.join(" / "), h.winners.length, h.players.join(" / "), h.players.length]
+    [fmt(h.at), h.by ?? "", h.memo, h.winners.join(" / "), h.winners.length, h.players.join(" / "), h.players.length]
       .map((v) => q(String(v)))
       .join(","),
   );
@@ -42,10 +48,14 @@ function toCsv(entries: HistoryEntry[]) {
   return "﻿" + [head, ...rows].join("\n");
 }
 
-/** 지난 판 기록 — 판이 끝날 때마다 자동으로 쌓인다 (이 기기에 저장) */
-export function HistoryLog({ entries, avatars, onDelete, onClear, onCopied }: Props) {
+/** 지난 판 기록 — 판이 끝날 때마다 자동으로 쌓인다 (맥 서버로 열면 다 같이, 아니면 이 기기에 저장) */
+export function HistoryLog({ entries: all, mode, me, onEditMe, avatars, onDelete, onClear, onCopied }: Props) {
   const [open, setOpen] = useState(true);
   const [showAll, setShowAll] = useState(false);
+  /** 돌린 사람으로 거르기 (null = 전체) */
+  const [byFilter, setByFilter] = useState<string | null>(null);
+  const runners = [...new Set(all.map((h) => h.by).filter((b): b is string => !!b))];
+  const entries = byFilter ? all.filter((h) => h.by === byFilter) : all;
   const shown = showAll ? entries : entries.slice(0, 5);
 
   // 매니저별 당첨 횟수
@@ -95,6 +105,41 @@ export function HistoryLog({ entries, avatars, onDelete, onClear, onCopied }: Pr
             transition={{ type: "spring", stiffness: 300, damping: 32 }}
             className="overflow-hidden"
           >
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
+              <span
+                className={cn(
+                  "flex items-center gap-1 rounded-full border-2 border-black px-2.5 py-0.5",
+                  mode === "online" ? "bg-cyan-200" : "bg-white text-black/55",
+                )}
+              >
+                {mode === "online" ? <Cloud className="size-3.5" strokeWidth={2.6} /> : <Smartphone className="size-3.5" strokeWidth={2.6} />}
+                {mode === "online" ? "맥에 저장 · 다 같이 봐요" : mode === "local" ? "이 기기에만 저장" : "연결 확인 중…"}
+              </span>
+              <button type="button" onClick={onEditMe} className="flex items-center gap-1 rounded-full border-2 border-black bg-white px-2.5 py-0.5 active:bg-black/5">
+                <UserRound className="size-3.5" strokeWidth={2.6} /> {me || "이름 없음"}
+                <span className="text-black/40">변경</span>
+              </button>
+            </div>
+
+            {runners.length > 1 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[null, ...runners].map((r) => (
+                  <button
+                    key={r ?? "__all"}
+                    type="button"
+                    onClick={() => setByFilter(r)}
+                    className={cn(
+                      "rounded-full border-2 border-black px-2.5 py-0.5 text-xs font-extrabold",
+                      byFilter === r ? "bg-black text-white" : "bg-white active:bg-black/5",
+                    )}
+                  >
+                    {r ?? "전체"}
+                    {r === me && " (나)"}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {!entries.length ? (
               <div className="mt-4 rounded-[22px] border-[2.5px] border-dashed border-black/25 py-7 text-center text-sm font-semibold text-black/35">
                 사다리를 끝까지 타면 여기에 기록이 남아요 📝
@@ -122,7 +167,10 @@ export function HistoryLog({ entries, avatars, onDelete, onClear, onCopied }: Pr
                     <li key={h.id} className="rounded-[20px] border-[2.5px] border-black bg-white p-3 shadow-brutal-sm">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs font-bold text-black/50">{fmt(h.at)}</p>
+                          <p className="font-mono text-xs font-bold text-black/50">
+                            {fmt(h.at)}
+                            {h.by && <span className="ml-1.5 font-sans font-extrabold text-black/70">· {h.by} 돌림</span>}
+                          </p>
                           {h.memo && <p className="mt-0.5 truncate text-sm font-extrabold">📦 {h.memo}</p>}
                         </div>
                         <button

@@ -31,6 +31,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png}"],
+        // 기록 API 는 서비스워커가 index.html 로 바꿔치지 않게
+        navigateFallbackDenylist: [/^\/api\//],
         // 폰트는 유니코드 조각이 많아서 미리 받지 않고, 쓰는 조각만 캐시
         runtimeCaching: [
           {
@@ -42,5 +44,7 @@ export default defineConfig({
       },
     }),
   ],
+  // npm run dev 일 때도 기록은 맥 서버(npm run server)로 보낸다
+  server: { proxy: { "/api": "http://localhost:4173" } },
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
 });

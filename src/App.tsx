@@ -8,14 +8,15 @@ import { DynamicIsland, type IslandState } from "@/components/dynamic-island";
 import { HistoryLog, type HistoryEntry } from "@/components/history-log";
 import { LadderBoard } from "@/components/ladder-board";
 import { ManagerRoster } from "@/components/manager-roster";
+import { NamePrompt } from "@/components/name-prompt";
 import { ResultSheet, type ResultRow } from "@/components/result-sheet";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useSharedHistory } from "@/hooks/use-shared-history";
 import { fileToAvatar } from "@/lib/image";
 import { createGame, laneColor, type Game } from "@/lib/ladder";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_MANAGERS = ["이지호", "이윤채", "정희선", "전은희", "주기쁨", "이채아"];
-const HISTORY_MAX = 300;
 
 const LOADER_CARDS: LoaderCard[] = [
   { id: 1, title: "매니저 집합", code: "STEP_01", color: "bg-amber-300", icon: Users },
@@ -40,7 +41,10 @@ export default function App() {
   const [absent, setAbsent] = useLocalStorage<string[]>("manager-ladder:absent", []);
   const [winnersWanted, setWinnersWanted] = useLocalStorage<number>("manager-ladder:winners", 1);
   const [memo, setMemo] = useLocalStorage<string>("manager-ladder:memo", "");
-  const [history, setHistory] = useLocalStorage<HistoryEntry[]>("manager-ladder:history", []);
+  const history = useSharedHistory();
+  /** 이 기기를 쓰는 사람 — 기록에 "누가 돌렸는지" 남긴다 */
+  const [me, setMe] = useLocalStorage<string>("manager-ladder:me", "");
+  const [editingMe, setEditingMe] = useState(false);
   /** 이미 명단에 반영한 기본 매니저 — 새로 추가된 기본 매니저만 한 번 넣고, 지운 사람은 되살리지 않는다 */
   const [defaultsSeen, setDefaultsSeen] = useLocalStorage<string[] | null>("manager-ladder:defaults-seen", null);
 
@@ -96,11 +100,12 @@ export default function App() {
     const entry: HistoryEntry = {
       id: `${Date.now()}-${r.g.id}`,
       at: new Date().toISOString(),
+      by: me,
       memo: memo.trim(),
       players: r.players,
       winners: r.players.filter((_, i) => r.g.prizes[r.g.ends[i]]),
     };
-    setHistory((prev) => [entry, ...prev].slice(0, HISTORY_MAX));
+    history.add(entry);
   }, [done, round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleAbsent = (name: string) => {
@@ -412,10 +417,13 @@ export default function App() {
 
         {/* 지난 기록 */}
         <HistoryLog
-          entries={history}
+          entries={history.entries}
+          mode={history.mode}
+          me={me}
+          onEditMe={() => setEditingMe(true)}
           avatars={avatars}
-          onDelete={(id) => setHistory((prev) => prev.filter((h) => h.id !== id))}
-          onClear={() => setHistory([])}
+          onDelete={history.remove}
+          onClear={history.clear}
           onCopied={flash}
         />
 
@@ -473,6 +481,19 @@ export default function App() {
               />
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {(!me || editingMe) && (
+          <NamePrompt
+            initial={me}
+            onSave={(name) => {
+              setMe(name);
+              setEditingMe(false);
+            }}
+            onCancel={me ? () => setEditingMe(false) : undefined}
+          />
         )}
       </AnimatePresence>
 
