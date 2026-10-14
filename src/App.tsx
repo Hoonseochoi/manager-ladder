@@ -5,6 +5,7 @@ import CardLoader, { type LoaderCard } from "@/components/ui/card-stack-loader";
 import { ManagerAvatar } from "@/components/ui/manager-avatar";
 import { Confetti } from "@/components/confetti";
 import { DynamicIsland, type IslandState } from "@/components/dynamic-island";
+import { InstallButton } from "@/components/install-button";
 import { HistoryLog, type HistoryEntry } from "@/components/history-log";
 import { LadderBoard } from "@/components/ladder-board";
 import { NamePrompt } from "@/components/name-prompt";
@@ -238,9 +239,15 @@ export default function App() {
             </span>
           </h1>
           <p className="mt-3 text-[15px] font-medium text-black/55">매니저 전원이 타고, 당첨된 사람이 설계를 몰빵 받아요.</p>
-          <span className="absolute right-2 top-2 animate-bob text-4xl" aria-hidden>
-            🏆
-          </span>
+          <div className="absolute right-1 top-0">
+            <InstallButton
+              fallback={
+                <span className="block animate-bob pr-1 pt-2 text-4xl" aria-hidden>
+                  🏆
+                </span>
+              }
+            />
+          </div>
         </header>
 
         {/* 이번 판 설정 */}
