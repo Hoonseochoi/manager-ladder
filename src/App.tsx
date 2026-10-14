@@ -5,6 +5,7 @@ import CardLoader, { type LoaderCard } from "@/components/ui/card-stack-loader";
 import { ManagerAvatar } from "@/components/ui/manager-avatar";
 import { Confetti } from "@/components/confetti";
 import { DynamicIsland, type IslandState } from "@/components/dynamic-island";
+import { HistoryLog, type HistoryEntry } from "@/components/history-log";
 import { LadderBoard } from "@/components/ladder-board";
 import { ManagerRoster } from "@/components/manager-roster";
 import { ResultSheet, type ResultRow } from "@/components/result-sheet";
@@ -13,7 +14,8 @@ import { fileToAvatar } from "@/lib/image";
 import { createGame, laneColor, type Game } from "@/lib/ladder";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_MANAGERS = ["이지호", "이윤채", "정희선", "전은희", "주기쁨"];
+const DEFAULT_MANAGERS = ["이지호", "이윤채", "정희선", "전은희", "주기쁨", "이채아"];
+const HISTORY_MAX = 300;
 
 const LOADER_CARDS: LoaderCard[] = [
   { id: 1, title: "매니저 집합", code: "STEP_01", color: "bg-amber-300", icon: Users },
@@ -38,6 +40,16 @@ export default function App() {
   const [absent, setAbsent] = useLocalStorage<string[]>("manager-ladder:absent", []);
   const [winnersWanted, setWinnersWanted] = useLocalStorage<number>("manager-ladder:winners", 1);
   const [memo, setMemo] = useLocalStorage<string>("manager-ladder:memo", "");
+  const [history, setHistory] = useLocalStorage<HistoryEntry[]>("manager-ladder:history", []);
+  /** 이미 명단에 반영한 기본 매니저 — 새로 추가된 기본 매니저만 한 번 넣고, 지운 사람은 되살리지 않는다 */
+  const [defaultsSeen, setDefaultsSeen] = useLocalStorage<string[] | null>("manager-ladder:defaults-seen", null);
+
+  useEffect(() => {
+    const seen = defaultsSeen ?? DEFAULT_MANAGERS.filter((m) => managers.includes(m));
+    const fresh = DEFAULT_MANAGERS.filter((m) => !seen.includes(m) && !managers.includes(m));
+    if (fresh.length) setManagers((prev) => [...prev, ...fresh]);
+    if (!defaultsSeen || DEFAULT_MANAGERS.some((m) => !defaultsSeen.includes(m))) setDefaultsSeen([...DEFAULT_MANAGERS]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const players = managers.filter((m) => !absent.includes(m));
   const maxWinners = Math.max(1, players.length - 1);
@@ -74,6 +86,22 @@ export default function App() {
       setActive(null);
     }
   }, [settingsKey]);
+
+  // 한 판이 끝나면(전원 공개) 기록에 남긴다
+  const loggedRound = useRef<number | null>(null);
+  useEffect(() => {
+    const r = round;
+    if (!r || done.size !== r.g.n || loggedRound.current === r.g.id) return;
+    loggedRound.current = r.g.id;
+    const entry: HistoryEntry = {
+      id: `${Date.now()}-${r.g.id}`,
+      at: new Date().toISOString(),
+      memo: memo.trim(),
+      players: r.players,
+      winners: r.players.filter((_, i) => r.g.prizes[r.g.ends[i]]),
+    };
+    setHistory((prev) => [entry, ...prev].slice(0, HISTORY_MAX));
+  }, [done, round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleAbsent = (name: string) => {
     if (running) return;
@@ -381,6 +409,15 @@ export default function App() {
             <LadderBoard game={round.g} players={round.players} avatars={avatars} done={done} active={active} onPick={pickLane} />
           </motion.section>
         )}
+
+        {/* 지난 기록 */}
+        <HistoryLog
+          entries={history}
+          avatars={avatars}
+          onDelete={(id) => setHistory((prev) => prev.filter((h) => h.id !== id))}
+          onClear={() => setHistory([])}
+          onCopied={flash}
+        />
 
         {/* 매니저 명단 */}
         <ManagerRoster

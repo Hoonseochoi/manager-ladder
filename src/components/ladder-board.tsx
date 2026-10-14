@@ -16,7 +16,7 @@ type Props = {
   onPick: (lane: number) => void;
 };
 
-const MIN_LANE = 64;
+const MIN_LANE = 54;
 
 export function LadderBoard({ game, players, avatars, done, active, onPick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -86,7 +86,7 @@ export function LadderBoard({ game, players, avatars, done, active, onPick }: Pr
                   className="flex w-full flex-col items-center gap-1"
                 >
                   <span className="relative rounded-full p-[3px]" style={{ background: isDone || isActive ? laneColor(i).hex : "transparent" }}>
-                    <ManagerAvatar name={name} src={avatars[name]} size={38} />
+                    <ManagerAvatar name={name} src={avatars[name]} size={34} />
                     {won && (
                       <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-black bg-amber-300">
                         <Trophy className="size-3" strokeWidth={3} />
