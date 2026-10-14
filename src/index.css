@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+@import "@fontsource/jua/korean.css";
+@import "@fontsource/jua/latin.css";
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-cute: "Jua", "Pretendard Variable", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, "Pretendard Variable", monospace;
+
+  --color-cream: #fff6e5;
+  --color-ink: #111111;
+
+  --shadow-brutal-sm: 2px 2px 0 0 #000;
+  --shadow-brutal: 4px 4px 0 0 #000;
+  --shadow-brutal-lg: 6px 6px 0 0 #000;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-wiggle: wiggle 0.5s var(--ease-spring);
+  --animate-bob: bob 2.4s ease-in-out infinite;
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    30% { transform: rotate(-6deg) scale(1.08); }
+    60% { transform: rotate(4deg) scale(1.04); }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-4px) rotate(3deg); }
+  }
+}
+
+@layer base {
+  * { -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+    background-image: radial-gradient(rgb(0 0 0 / 0.09) 1.2px, transparent 1.2px);
+    background-size: 18px 18px;
+    overscroll-behavior-y: none;
+  }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; }
+}
+
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* 공통 '귀여운 브루탈' 표면: 애플식 큰 라운드 + 검은 테두리 + 딱 떨어지는 그림자 */
+@utility brutal-card {
+  border: 3px solid #000;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: var(--shadow-brutal-lg);
+}
+@utility press {
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.2s ease;
+  &:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 0 #000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
