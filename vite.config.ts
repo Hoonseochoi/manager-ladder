@@ -30,7 +30,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,jpg,jpeg,webp}"],
         // 기록 API 는 서비스워커가 index.html 로 바꿔치지 않게
         navigateFallbackDenylist: [/^\/api\//],
         // 폰트는 유니코드 조각이 많아서 미리 받지 않고, 쓰는 조각만 캐시

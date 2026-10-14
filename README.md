@@ -35,7 +35,14 @@ git clone https://github.com/Hoonseochoi/manager-ladder.git
 - **기록 삭제는 비밀번호 필요** — 맥의 `data/delete-password.txt` 에 적힌 값(저장소엔 안 올라감). 파일이 없으면 삭제가 막힘. 바꾸려면 이 파일만 고치면 됨
 - 개발 중엔 `npm run server`(기록 서버) + `npm run dev` 를 같이 켜면 `/api` 가 서버로 연결됨
 
-> 매니저 명단·사진은 여전히 **브라우저마다** 따로 저장된다.
+### 와이파이 밖에서도 접속 (맥 자동 실행)
+```bash
+bash mac/install-autostart.sh
+```
+- 맥에 로그인하면 서버(`server.mjs`)와 Cloudflare 임시 터널(`mac/tunnel.sh`)이 자동으로 뜨고, 꺼지면 다시 켜짐. 서버가 도는 동안 맥이 잠들지 않음
+- 터널 주소는 켤 때마다 바뀌는데, `mac/tunnel.sh` 가 새 주소를 `public/server.json` 으로 GitHub 에 자동 푸시 → **모두 https://hoonseochoi.github.io/manager-ladder/ 로 들어오면 됨**
+- 현재 터널 주소: `data/tunnel-url.txt`, 로그: `data/*.log`
+- 해제: `bash mac/install-autostart.sh uninstall`
 
 ## 사용
 1. **이번 판** — 매니저 전원이 기본 참여. 빠질 사람만 탭해서 끄기
@@ -47,24 +54,25 @@ git clone https://github.com/Hoonseochoi/manager-ladder.git
 6. **지난 기록**: 한 판을 끝까지(전원 공개) 타면 자동 저장 — 일시·돌린 사람·설계 메모·당첨자·참여자
    돌린 사람별로 거르기 가능
    누적 당첨 횟수, 전체 복사, 엑셀(CSV) 내려받기, 개별/전체 삭제. 최근 300판까지 이 기기에 저장
-7. **매니저 명단**: 빈 동그라미 탭 → 사진 / **편집** → 이름 고치기·빼기·추가
-   (기본 명단: 이지호 · 이윤채 · 정희선 · 전은희 · 주기쁨 · 이채아.
-   기본 명단에 새로 넣은 사람은 이미 쓰던 기기에도 한 번 자동 추가, 지운 사람은 되살리지 않음)
+7. **매니저 명단·사진은 코드에서 직접 관리** (사이트에서는 못 바꿈 → 모두에게 똑같이 보임)
+   - 명단: `src/lib/managers.ts` 의 `MANAGERS` 수정
+   - 사진: `src/assets/managers/이름.jpg` 로 넣기 (png·webp 도 됨, 없으면 빈 동그라미)
+   - 고친 뒤 `main` 에 푸시 → GitHub Pages 자동 반영. 맥 서버는 `npm run build` 후 재시작
 
 ## 구조
 ```
 server.mjs                              # 앱 + 기록 API (data/history.json)
 src/
   components/ui/card-stack-loader.tsx   # 카드 스택 로더 (사다리 만들 때 표시)
-  components/ui/manager-avatar.tsx      # 빈 아바타 / 프로필 사진 업로드
+  components/ui/manager-avatar.tsx      # 프로필 사진 / 빈 아바타
   components/dynamic-island.tsx         # 상단 다이나믹 아일랜드
   components/ladder-board.tsx           # SVG 사다리 + 경로 애니메이션
-  components/manager-roster.tsx         # 매니저 명단 (사진·편집)
   components/result-sheet.tsx           # 당첨 결과 바텀시트
   components/confetti.tsx               # 당첨 색종이
   components/history-log.tsx            # 지난 기록 (자동 저장·CSV)
   components/name-prompt.tsx            # 첫 접속 때 이름 입력
   hooks/use-shared-history.ts           # 기록: 맥 서버 공유 / 기기 저장
+  lib/managers.ts                       # 매니저 명단 + 사진 자동 연결
   lib/ladder.ts                         # 사다리 생성·당첨 칸 섞기·경로 계산
 ```
 

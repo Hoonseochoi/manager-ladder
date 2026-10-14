@@ -7,16 +7,14 @@ import { Confetti } from "@/components/confetti";
 import { DynamicIsland, type IslandState } from "@/components/dynamic-island";
 import { HistoryLog, type HistoryEntry } from "@/components/history-log";
 import { LadderBoard } from "@/components/ladder-board";
-import { ManagerRoster } from "@/components/manager-roster";
 import { NamePrompt } from "@/components/name-prompt";
 import { ResultSheet, type ResultRow } from "@/components/result-sheet";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSharedHistory } from "@/hooks/use-shared-history";
-import { fileToAvatar } from "@/lib/image";
 import { createGame, laneColor, type Game } from "@/lib/ladder";
+import { AVATARS as avatars, MANAGERS as managers } from "@/lib/managers";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_MANAGERS = ["이지호", "이윤채", "정희선", "전은희", "주기쁨", "이채아"];
 
 const LOADER_CARDS: LoaderCard[] = [
   { id: 1, title: "매니저 집합", code: "STEP_01", color: "bg-amber-300", icon: Users },
@@ -35,8 +33,6 @@ const haptic = (p: number | number[]) => {
 };
 
 export default function App() {
-  const [managers, setManagers] = useLocalStorage<string[]>("manager-ladder:managers", DEFAULT_MANAGERS);
-  const [avatars, setAvatars] = useLocalStorage<Record<string, string>>("manager-ladder:avatars", {});
   /** 이번 판에 빠지는 매니저 */
   const [absent, setAbsent] = useLocalStorage<string[]>("manager-ladder:absent", []);
   const [winnersWanted, setWinnersWanted] = useLocalStorage<number>("manager-ladder:winners", 1);
@@ -45,16 +41,6 @@ export default function App() {
   /** 이 기기를 쓰는 사람 — 기록에 "누가 돌렸는지" 남긴다 */
   const [me, setMe] = useLocalStorage<string>("manager-ladder:me", "");
   const [editingMe, setEditingMe] = useState(false);
-  /** 이미 명단에 반영한 기본 매니저 — 새로 추가된 기본 매니저만 한 번 넣고, 지운 사람은 되살리지 않는다 */
-  const [defaultsSeen, setDefaultsSeen] = useLocalStorage<string[] | null>("manager-ladder:defaults-seen", null);
-
-  useEffect(() => {
-    const seen = defaultsSeen ?? DEFAULT_MANAGERS.filter((m) => managers.includes(m));
-    const fresh = DEFAULT_MANAGERS.filter((m) => !seen.includes(m) && !managers.includes(m));
-    if (fresh.length) setManagers((prev) => [...prev, ...fresh]);
-    if (!defaultsSeen || DEFAULT_MANAGERS.some((m) => !defaultsSeen.includes(m))) setDefaultsSeen([...DEFAULT_MANAGERS]);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const players = managers.filter((m) => !absent.includes(m));
   const maxWinners = Math.max(1, players.length - 1);
   const winners = Math.min(Math.max(1, winnersWanted), maxWinners);
@@ -112,56 +98,6 @@ export default function App() {
     if (running) return;
     setAbsent((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
   };
-
-  /* ───────── 매니저 명단 ───────── */
-  const addManager = (raw: string) => {
-    const name = raw.trim();
-    if (!name) return false;
-    if (managers.includes(name)) {
-      flash(`${name} 님은 이미 있어요`);
-      return false;
-    }
-    setManagers((prev) => [...prev, name]);
-    flash(`${name} 추가!`);
-    return true;
-  };
-  const renameManager = (from: string, raw: string) => {
-    const to = raw.trim();
-    if (!to || to === from) return false;
-    if (managers.includes(to)) {
-      flash(`${to} 님은 이미 있어요`);
-      return false;
-    }
-    setManagers((prev) => prev.map((m) => (m === from ? to : m)));
-    setAbsent((prev) => prev.map((m) => (m === from ? to : m)));
-    setAvatars((prev) => {
-      if (!prev[from]) return prev;
-      const next = { ...prev, [to]: prev[from] };
-      delete next[from];
-      return next;
-    });
-    return true;
-  };
-  const removeManager = (name: string) => {
-    if (!confirm(`${name} 님을 명단에서 뺄까요?`)) return;
-    setManagers((prev) => prev.filter((m) => m !== name));
-    setAbsent((prev) => prev.filter((m) => m !== name));
-  };
-  const pickAvatar = async (name: string, file: File) => {
-    try {
-      const url = await fileToAvatar(file);
-      setAvatars((prev) => ({ ...prev, [name]: url }));
-      flash(`${name} 사진 등록!`);
-    } catch {
-      flash("사진을 불러오지 못했어요");
-    }
-  };
-  const clearAvatar = (name: string) =>
-    setAvatars((prev) => {
-      const next = { ...prev };
-      delete next[name];
-      return next;
-    });
 
   /* ───────── 게임 ───────── */
   const build = async () => {
@@ -427,16 +363,6 @@ export default function App() {
           onCopied={flash}
         />
 
-        {/* 매니저 명단 */}
-        <ManagerRoster
-          managers={managers}
-          avatars={avatars}
-          onAdd={addManager}
-          onRename={renameManager}
-          onRemove={removeManager}
-          onPickPhoto={pickAvatar}
-          onClearPhoto={clearAvatar}
-        />
       </main>
 
       {/* 하단 독 */}
