@@ -11,11 +11,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon.svg", "icons/apple-touch-icon.png"],
+      includeAssets: ["icons/favicon-64.png", "icons/apple-touch-icon.png"],
       manifest: {
         name: "설계잇츠me",
         short_name: "설계잇츠me",
-        description: "설계매물(설계사_매니저)을 입력하면 사다리로 매니저를 배정합니다.",
+        description: "설계잇츠me — 사다리로 설계 몰빵 매니저를 정해요.",
         lang: "ko",
         start_url: "./",
         scope: "./",
