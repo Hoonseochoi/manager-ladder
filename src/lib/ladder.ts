@@ -1,5 +1,3 @@
-export type Entry = { designer: string; manager: string };
-
 /** 사다리 한 줄의 이동: row 높이에서 dir 방향(+1 오른쪽, -1 왼쪽)으로 건넘 */
 export type Move = { row: number; dir: 1 | -1 };
 
@@ -8,7 +6,8 @@ export type Game = {
   n: number;
   rows: number;
   rungs: boolean[][];
-  bottoms: string[];
+  /** 아래 칸마다 당첨 여부 */
+  prizes: boolean[];
   moves: Move[][];
   ends: number[];
 };
@@ -27,20 +26,6 @@ export const LANE_COLORS = [
 ] as const;
 
 export const laneColor = (i: number) => LANE_COLORS[i % LANE_COLORS.length];
-
-/** "설계사이름_매니저명" 여러 건 → Entry[]. 줄바꿈·쉼표·세미콜론으로 구분 */
-export function parseEntries(raw: string): Entry[] {
-  return raw
-    .split(/[\n,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => {
-      const i = s.indexOf("_");
-      if (i === -1) return { designer: s, manager: "" };
-      return { designer: s.slice(0, i).trim(), manager: s.slice(i + 1).trim() };
-    })
-    .filter((e) => e.designer);
-}
 
 export function shuffle<T>(a: readonly T[]): T[] {
   const r = a.slice();
@@ -84,17 +69,17 @@ function trace(rungs: boolean[][], start: number) {
 
 let gameSeq = 0;
 
-export function createGame(entries: Entry[]): Game {
-  const n = entries.length;
+/** n명이 참여하고 그중 winners 명이 당첨되는 사다리 */
+export function createGame(n: number, winners: number): Game {
   const rows = Math.min(Math.max(n * 2 + 2, 9), 18);
   const rungs = makeRungs(n, rows);
-  const traced = entries.map((_, i) => trace(rungs, i));
+  const traced = Array.from({ length: n }, (_, i) => trace(rungs, i));
   return {
     id: ++gameSeq,
     n,
     rows,
     rungs,
-    bottoms: shuffle(entries.map((e) => e.manager || "—")),
+    prizes: shuffle(Array.from({ length: n }, (_, i) => i < winners)),
     moves: traced.map((t) => t.moves),
     ends: traced.map((t) => t.end),
   };

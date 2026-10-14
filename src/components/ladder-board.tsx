@@ -1,12 +1,14 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { Trophy } from "lucide-react";
 import { ManagerAvatar } from "@/components/ui/manager-avatar";
-import { boardHeight, lanePath, laneColor, laneX, rowY, type Entry, type Game, type Geometry } from "@/lib/ladder";
+import { boardHeight, lanePath, laneColor, laneX, rowY, type Game, type Geometry } from "@/lib/ladder";
 import { cn } from "@/lib/utils";
 
 type Props = {
   game: Game;
-  entries: Entry[];
+  /** 위쪽에 서는 매니저들 */
+  players: string[];
   avatars: Record<string, string>;
   done: ReadonlySet<number>;
   /** 지금 타고 있는 레인과 진행률(0..1) */
@@ -16,7 +18,7 @@ type Props = {
 
 const MIN_LANE = 64;
 
-export function LadderBoard({ game, entries, avatars, done, active, onPick }: Props) {
+export function LadderBoard({ game, players, avatars, done, active, onPick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(320);
 
@@ -66,11 +68,12 @@ export function LadderBoard({ game, entries, avatars, done, active, onPick }: Pr
   return (
     <div ref={scrollRef} className="no-scrollbar -mx-5 overflow-x-auto px-3 pb-2 pt-1">
       <div className="mx-auto" style={{ width: W }}>
-        {/* 위: 설계사 */}
+        {/* 위: 매니저 */}
         <div className="flex">
-          {entries.map((e, i) => {
+          {players.map((name, i) => {
             const isDone = done.has(i);
             const isActive = active?.lane === i;
+            const won = isDone && game.prizes[game.ends[i]];
             return (
               <div key={i} className="flex shrink-0 justify-center px-1" style={{ width: geo.laneW }}>
                 <motion.button
@@ -79,13 +82,25 @@ export function LadderBoard({ game, entries, avatars, done, active, onPick }: Pr
                   whileTap={{ scale: 0.9 }}
                   animate={isActive ? { y: [0, -5, 0] } : { y: 0 }}
                   transition={isActive ? { repeat: Infinity, duration: 0.6 } : undefined}
-                  title={e.designer}
-                  className={cn(
-                    "w-full truncate rounded-2xl border-[2.5px] border-black px-1.5 py-2 text-[13px] font-extrabold tracking-tight shadow-brutal-sm transition-colors",
-                    isDone || isActive ? laneColor(i).bg : "bg-white",
-                  )}
+                  title={name}
+                  className="flex w-full flex-col items-center gap-1"
                 >
-                  {e.designer}
+                  <span className="relative rounded-full p-[3px]" style={{ background: isDone || isActive ? laneColor(i).hex : "transparent" }}>
+                    <ManagerAvatar name={name} src={avatars[name]} size={38} />
+                    {won && (
+                      <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-black bg-amber-300">
+                        <Trophy className="size-3" strokeWidth={3} />
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "w-full truncate rounded-full border-2 border-black px-1 py-0.5 text-center text-xs font-extrabold shadow-brutal-sm transition-colors",
+                      isDone || isActive ? laneColor(i).bg : "bg-white",
+                    )}
+                  >
+                    {name}
+                  </span>
                 </motion.button>
               </div>
             );
@@ -120,32 +135,39 @@ export function LadderBoard({ game, entries, avatars, done, active, onPick }: Pr
           )}
         </svg>
 
-        {/* 아래: 매니저 (프로필 사진 + 이름) */}
+        {/* 아래: 당첨 / 꽝 (도착하기 전엔 ? 로 가려둠) */}
         <div className="flex">
-          {game.bottoms.map((m, j) => {
+          {game.prizes.map((win, j) => {
             const by = hitBy.get(j);
-            const hit = by !== undefined;
+            const open = by !== undefined;
             return (
-              <div key={j} className="flex shrink-0 flex-col items-center gap-1.5 px-1" style={{ width: geo.laneW }}>
+              <div key={j} className="flex shrink-0 justify-center px-1" style={{ width: geo.laneW }}>
                 <motion.div
-                  key={hit ? `hit-${game.id}` : "idle"}
-                  initial={hit ? { scale: 0.6, rotate: -12 } : false}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 14 }}
-                  className="rounded-full p-[3px]"
-                  style={{ background: hit ? laneColor(by).hex : "transparent" }}
-                >
-                  <ManagerAvatar name={m} src={avatars[m]} size={36} />
-                </motion.div>
-                <span
-                  title={m}
+                  key={open ? `open-${game.id}` : "closed"}
+                  initial={open ? { rotateY: 90, scale: 0.7 } : false}
+                  animate={{ rotateY: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 16 }}
                   className={cn(
-                    "w-full truncate rounded-full border-2 border-black px-1 py-0.5 text-center text-xs font-bold",
-                    hit ? laneColor(by).bg : "bg-white",
+                    "flex h-14 w-full flex-col items-center justify-center rounded-2xl border-[2.5px] border-black text-xs font-black shadow-brutal-sm",
+                    !open && "bg-white text-black/30",
+                    open && win && "bg-amber-300",
+                    open && !win && "bg-zinc-200 text-black/50",
                   )}
+                  style={open ? { boxShadow: `3px 3px 0 0 ${laneColor(by).hex}, 3px 3px 0 2px #000` } : undefined}
                 >
-                  {m}
-                </span>
+                  {!open ? (
+                    <span className="font-cute text-2xl leading-none">?</span>
+                  ) : win ? (
+                    <>
+                      <Trophy className="size-5" strokeWidth={2.6} />
+                      <span className="mt-0.5">당첨</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-cute text-lg leading-none">꽝</span>
+                    </>
+                  )}
+                </motion.div>
               </div>
             );
           })}

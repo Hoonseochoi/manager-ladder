@@ -58,7 +58,7 @@ export function DynamicIsland({ state, onClick }: { state: IslandState; onClick?
             {state.mode === "expanded" && (
               <span className="flex w-full min-w-0 items-center gap-3.5 px-6">
                 <span className="rounded-full p-[3px]" style={{ background: state.color }}>
-                  <ManagerAvatar name={state.to} src={state.avatar} size={54} />
+                  <ManagerAvatar name={state.from} src={state.avatar} size={54} />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
                   <span
