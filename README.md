@@ -32,6 +32,7 @@ git clone https://github.com/Hoonseochoi/manager-ladder.git
 - 서버에 처음 붙을 때 그 기기에만 있던 기록은 자동으로 서버에 올라감
 - 저장 폴더 바꾸기: `LADDER_DATA_DIR=~/Documents/사다리기록 npm start`
 - 전체 삭제 시 `data/history-backup-*.json` 으로 백업이 남음
+- **기록 삭제는 비밀번호 필요** — 맥의 `data/delete-password.txt` 에 적힌 값(저장소엔 안 올라감). 파일이 없으면 삭제가 막힘. 바꾸려면 이 파일만 고치면 됨
 - 개발 중엔 `npm run server`(기록 서버) + `npm run dev` 를 같이 켜면 `/api` 가 서버로 연결됨
 
 > 매니저 명단·사진은 여전히 **브라우저마다** 따로 저장된다.

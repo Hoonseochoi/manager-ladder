@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(ROOT, "dist");
@@ -14,6 +15,8 @@ const DATA_DIR = path.resolve((process.env.LADDER_DATA_DIR || path.join(ROOT, "d
 const HISTORY_FILE = path.join(DATA_DIR, "history.json");
 const PORT = Number(process.env.PORT) || 4173;
 const HISTORY_MAX = 5000;
+// 기록 삭제 비밀번호 — 저장소에 올라가지 않게 data/delete-password.txt(또는 LADDER_DELETE_PASSWORD)에 둔다
+const PASSWORD_FILE = path.join(DATA_DIR, "delete-password.txt");
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -61,9 +64,31 @@ function clean(e) {
   return { id, at, by: str(e.by, 40), memo: str(e.memo), players: names(e.players), winners: names(e.winners) };
 }
 
+async function deletePassword() {
+  if (process.env.LADDER_DELETE_PASSWORD) return process.env.LADDER_DELETE_PASSWORD;
+  try {
+    return (await fs.readFile(PASSWORD_FILE, "utf8")).trim();
+  } catch {
+    return "";
+  }
+}
+const digest = (s) => createHash("sha256").update(s).digest();
+/** 비밀번호가 설정 안 돼 있으면 삭제 자체를 막는다 */
+async function canDelete(req) {
+  const want = await deletePassword();
+  const got = String(req.headers["x-delete-password"] ?? "");
+  return !!want && timingSafeEqual(digest(want), digest(got));
+}
+
 /* ───────── HTTP ───────── */
+// GitHub Pages 주소로 연 앱도 터널 주소로 기록을 주고받을 수 있게 허용
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-Delete-Password",
+};
 const send = (res, status, body, type = "application/json; charset=utf-8") => {
-  res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store" });
+  res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store", ...CORS });
   res.end(typeof body === "string" ? body : JSON.stringify(body));
 };
 
@@ -93,6 +118,11 @@ async function api(req, res, pathname) {
       for (const e of fresh) console.log(`[기록] ${e.at} ${e.by || "?"} → 🏆 ${e.winners.join(", ")}`);
     }
     return send(res, 200, history);
+  }
+
+  if (req.method === "DELETE" && !(await canDelete(req))) {
+    console.log(`[삭제 거부] 비밀번호 틀림 ${pathname}`);
+    return send(res, 401, { error: "wrong password" });
   }
 
   const one = pathname.match(/^\/api\/history\/([^/]+)$/);
@@ -136,7 +166,13 @@ async function serveStatic(res, pathname) {
 const server = http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, "http://x");
   try {
-    if (pathname.startsWith("/api/")) return await api(req, res, pathname);
+    if (pathname.startsWith("/api/")) {
+      if (req.method === "OPTIONS") {
+        res.writeHead(204, CORS);
+        return res.end();
+      }
+      return await api(req, res, pathname);
+    }
     return await serveStatic(res, pathname);
   } catch (err) {
     console.error(err);
@@ -152,5 +188,6 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`\n  매니저 사다리 서버 켜짐 (기록 ${history.length}판)`);
   console.log(`  맥에서:               http://localhost:${PORT}`);
   if (lan) console.log(`  같은 와이파이 폰에서: http://${lan}:${PORT}`);
-  console.log(`  기록 저장 위치:       ${HISTORY_FILE}\n`);
+  console.log(`  기록 저장 위치:       ${HISTORY_FILE}`);
+  deletePassword().then((p) => console.log(p ? "  기록 삭제: 비밀번호 필요\n" : `  ⚠ 삭제 비밀번호가 없어서 기록 삭제가 막혀 있어요 (${PASSWORD_FILE})\n`));
 });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Cloud, Copy, Download, Smartphone, Trash2, Trophy, UserRound } from "lucide-react";
 import { ManagerAvatar } from "@/components/ui/manager-avatar";
-import type { SyncMode } from "@/hooks/use-shared-history";
+import type { DeleteResult, SyncMode } from "@/hooks/use-shared-history";
 import { cn } from "@/lib/utils";
 
 export type HistoryEntry = {
@@ -22,8 +22,8 @@ type Props = {
   me: string;
   onEditMe: () => void;
   avatars: Record<string, string>;
-  onDelete: (id: string) => void;
-  onClear: () => void;
+  onDelete: (id: string, password?: string) => Promise<DeleteResult>;
+  onClear: (password?: string) => Promise<DeleteResult>;
   onCopied: (msg: string) => void;
 };
 
@@ -57,6 +57,18 @@ export function HistoryLog({ entries: all, mode, me, onEditMe, avatars, onDelete
   const runners = [...new Set(all.map((h) => h.by).filter((b): b is string => !!b))];
   const entries = byFilter ? all.filter((h) => h.by === byFilter) : all;
   const shown = showAll ? entries : entries.slice(0, 5);
+
+  /** 맥에 저장된 기록은 비밀번호를 받아서 지운다 */
+  const confirmDelete = async (question: string, run: (password?: string) => Promise<DeleteResult>) => {
+    let password: string | undefined;
+    if (mode === "online") {
+      const input = prompt(`${question}\n삭제 비밀번호를 입력해 주세요.`);
+      if (input === null) return;
+      password = input;
+    } else if (!confirm(question)) return;
+    const result = await run(password);
+    onCopied(result === "ok" ? "기록을 지웠어요 🗑️" : result === "wrong" ? "비밀번호가 틀렸어요 🔒" : "지우지 못했어요. 연결을 확인해 주세요");
+  };
 
   // 매니저별 당첨 횟수
   const tally = new Map<string, number>();
@@ -176,7 +188,7 @@ export function HistoryLog({ entries: all, mode, me, onEditMe, avatars, onDelete
                         <button
                           type="button"
                           aria-label="이 기록 지우기"
-                          onClick={() => confirm("이 기록을 지울까요?") && onDelete(h.id)}
+                          onClick={() => confirmDelete("이 기록을 지울까요?", (pw) => onDelete(h.id, pw))}
                           className="grid size-7 shrink-0 place-items-center rounded-full text-black/35 active:bg-black/5"
                         >
                           <Trash2 className="size-4" strokeWidth={2.4} />
@@ -225,7 +237,7 @@ export function HistoryLog({ entries: all, mode, me, onEditMe, avatars, onDelete
                   </button>
                   <button
                     type="button"
-                    onClick={() => confirm("기록을 전부 지울까요? 되돌릴 수 없어요.") && onClear()}
+                    onClick={() => confirmDelete("기록을 전부 지울까요? 되돌릴 수 없어요.", onClear)}
                     className="ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-extrabold text-rose-500 active:bg-rose-50"
                   >
                     <Trash2 className="size-4" strokeWidth={2.6} /> 전체 삭제
